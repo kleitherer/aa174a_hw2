@@ -39,15 +39,16 @@ class AStar(object):
         Hint: self.occupancy is a DetOccupancyGrid2D object, take a look at its methods for what might be
               useful here
         """
-        ########## Code starts here ##########
-        raise NotImplementedError("is_free not implemented")
+        ########## Code starts here ##########  
+        return self.occupancy.is_free(x)
         ########## Code ends here ##########
 
     def distance(self, x1, x2):
         """
         Computes the Euclidean distance between two states.
         Inputs:
-            x1: First state tuple
+            x1: First state tuple 
+            (x1[0], x1[1])... it's an immutable sequence of values, not a list
             x2: Second state tuple
         Output:
             Float Euclidean distance
@@ -55,7 +56,7 @@ class AStar(object):
         HINT: This should take one line. Tuples can be converted to numpy arrays using np.array().
         """
         ########## Code starts here ##########
-        raise NotImplementedError("distance not implemented")
+        return np.sqrt(np.sum((np.array(x1) - np.array(x2))**2))
         ########## Code ends here ##########
 
     def snap_to_grid(self, x):
@@ -91,9 +92,23 @@ class AStar(object):
         """
         neighbors = []
         ########## Code starts here ##########
-        raise NotImplementedError("get_neighbors not implemented")
-        ########## Code ends here ##########
+
+        nearby_states = [ 
+            self.snap_to_grid(x + (self.resolution, 0)),
+            self.snap_to_grid(x - (self.resolution, 0)),
+            self.snap_to_grid(x + (0, self.resolution)),
+            self.snap_to_grid(x - (0, self.resolution)),
+            self.snap_to_grid(x + (self.resolution, self.resolution)),
+            self.snap_to_grid(x - (self.resolution, self.resolution)),
+            self.snap_to_grid(x + (-self.resolution, self.resolution)),
+            self.snap_to_grid(x - (-self.resolution, self.resolution))]
+
+        for neighbor in nearby_states:
+            if self.is_free(neighbor):
+                neighbors.append(neighbor)
         return neighbors
+
+        ########## Code ends here ##########
 
     def find_best_est_cost_through(self):
         """
@@ -154,9 +169,66 @@ class AStar(object):
                 set() class. This allows easily adding and removing items using
                 .add(item) and .remove(item) respectively, as well as checking for
                 set membership efficiently using the syntax "if item in set".
+
+
+
+        self.statespace_lo = statespace_lo         # state space lower bound (e.g., [-5, -5])
+        self.statespace_hi = statespace_hi         # state space upper bound (e.g., [5, 5])
+        self.occupancy = occupancy                 # occupancy grid (a DetOccupancyGrid2D object)
+        self.resolution = resolution               # resolution of the discretization of state space (cell/m)
+        self.x_offset = x_init                     
+        self.x_init = self.snap_to_grid(x_init)    # initial state
+        self.x_goal = self.snap_to_grid(x_goal)    # goal state
+
+        self.closed_set = set()    # the set containing the states that have been visited
+        self.open_set = set()      # the set containing the states that are condidate for future expension
+
+        self.est_cost_through = {}  # dictionary of the estimated cost from start to goal passing through state (often called f score)
+        self.cost_to_arrive = {}    # dictionary of the cost-to-arrive at state from start (often called g score)
+        self.came_from = {}         # dictionary keeping track of each state's parent to reconstruct the path
+
+        self.open_set.add(self.x_init)
+        self.cost_to_arrive[self.x_init] = 0
+        self.est_cost_through[self.x_init] = self.distance(self.x_init,self.x_goal)
+
+        self.path = None        # the final path as a list of states
+
         """
         ########## Code starts here ##########
-        raise NotImplementedError("solve not implemented")
+        
+        # we need to explore the set of states that are candidates for future expansion
+        # for each one, we compute the g-score which is the cost to arrive at the state from the initial state
+        # and the f-score which is the estimated cost through the state to the goal (estimated total cost of cheapest path )
+
+        while self.open_set:
+            # find the state in the open set with the lowest f-score
+            current = self.find_best_est_cost_through()
+            # if the current state is the goal, we have found a solution
+            if current == self.x_goal:
+                self.path = self.reconstruct_path()
+                return True
+            
+            # remove the current state from the open set and add it to the closed set
+            self.open_set.remove(current)
+            self.closed_set.add(current)
+            # explore the neighbors of the current state
+            neighbors = self.get_neighbors(current) 
+            for neighbor in neighbors:
+                # if the neighbor is already in the closed set, we skip it
+                if neighbor in self.closed_set:
+                    continue
+                # compute the tentative g-score for the neighbor
+                tentative_g_score = self.cost_to_arrive[current] + self.distance(current, neighbor)
+                # if the neighbor is not in the open set, we add it to the open set
+                if neighbor not in self.open_set or tentative_g_score < self.cost_to_arrive[neighbor]:
+                    self.cost_to_arrive[neighbor] = tentative_g_score
+                    self.est_cost_through[neighbor] = tentative_g_score + self.distance(neighbor, self.x_goal)
+                    self.came_from[neighbor] = current
+                    self.open_set.add(neighbor)
+
+        # No path found
+        return False
+
         ########## Code ends here ##########
 
 class DetOccupancyGrid2D(object):
