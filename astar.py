@@ -93,15 +93,18 @@ class AStar(object):
         neighbors = []
         ########## Code starts here ##########
 
-        nearby_states = [ 
-            self.snap_to_grid(x + (self.resolution, 0)),
-            self.snap_to_grid(x - (self.resolution, 0)),
-            self.snap_to_grid(x + (0, self.resolution)),
-            self.snap_to_grid(x - (0, self.resolution)),
-            self.snap_to_grid(x + (self.resolution, self.resolution)),
-            self.snap_to_grid(x - (self.resolution, self.resolution)),
-            self.snap_to_grid(x + (-self.resolution, self.resolution)),
-            self.snap_to_grid(x - (-self.resolution, self.resolution))]
+        nearby_states = [
+            self.snap_to_grid((x[0]+self.resolution,x[1])),
+            self.snap_to_grid((x[0]-self.resolution,x[1])),
+
+            self.snap_to_grid((x[0],x[1]+self.resolution)),
+            self.snap_to_grid((x[0],x[1]-self.resolution)),
+
+            self.snap_to_grid((x[0]+self.resolution,x[1]+self.resolution)),
+            self.snap_to_grid((x[0]-self.resolution,x[1]+self.resolution)),
+            self.snap_to_grid((x[0]+self.resolution,x[1]-self.resolution)),
+            self.snap_to_grid((x[0]-self.resolution,x[1]-self.resolution))
+        ]
 
         for neighbor in nearby_states:
             if self.is_free(neighbor):
